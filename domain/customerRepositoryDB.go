@@ -2,7 +2,6 @@ package domain
 
 import (
 	"database/sql"
-	"time"
 
 	"github.com/caiquenoboa/go-banking/errs"
 	"github.com/caiquenoboa/go-banking/logger"
@@ -56,14 +55,7 @@ func (d CustomerRepositoryDB) FindById(id string) (*Customer, *errs.AppError) {
 
 }
 
-func NewCustomerRepositoryDb() CustomerRepositoryDB {
-	client, err := sqlx.Open("mysql", "root:123456@tcp(localhost:3306)/banking")
-	if err != nil {
-		panic(err)
-	}
+func NewCustomerRepositoryDb(client *sqlx.DB) CustomerRepositoryDB {
 
-	client.SetConnMaxLifetime(time.Minute * 3)
-	client.SetMaxOpenConns(10)
-	client.SetMaxIdleConns(10)
 	return CustomerRepositoryDB{client}
 }
