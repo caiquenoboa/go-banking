@@ -30,23 +30,39 @@ func Start() {
 
 	router := mux.NewRouter()
 
-	//wiring
-	// ch := CustomerHandlers{service.NewCustomerService(domain.NewCustomerRepositoryStub())}
-	dbClient := getDbClient()
-	ch := CustomerHandlers{service.NewCustomerService(domain.NewCustomerRepositoryDb(dbClient))}
-	ah := AccountHandler{service.NewAccountService(domain.NewAccountRepositoryDb(dbClient))}
+	customerHandler, accountHandler, transactionHandler := initHandlers()
 
 	//define routes
-	router.HandleFunc("/customers", ch.getAllCustomers).Methods(http.MethodGet)
-	router.HandleFunc("/customers/{customer_id:[0-9]+}", ch.getCustomer).Methods(http.MethodGet)
-	router.HandleFunc("/customers/{customer_id:[0-9]+}/account", ah.newAccount).Methods(http.MethodPost)
-	router.HandleFunc("/customers/{customer_id:[0-9]+}/transaction", ah.transaction).Methods(http.MethodPost)
+	router.HandleFunc("/customers", customerHandler.getAllCustomers).Methods(http.MethodGet)
+	router.HandleFunc("/customers/{customer_id:[0-9]+}", customerHandler.getCustomer).Methods(http.MethodGet)
+	router.HandleFunc("/customers/{customer_id:[0-9]+}/account", accountHandler.newAccount).Methods(http.MethodPost)
+	router.HandleFunc("/customers/{customer_id:[0-9]+}/transaction", transactionHandler.newTransaction).Methods(http.MethodPost)
 
 	address := os.Getenv("SERVER_ADDRESS")
 	port := os.Getenv("SERVER_PORT")
 
 	//starting server
 	log.Fatal(http.ListenAndServe(address+":"+port, router))
+}
+
+func initHandlers() (customerHandler CustomerHandlers, accountHandler AccountHandler, transactionHandler TransactionHandler) {
+	//wiring
+	// ch := CustomerHandlers{service.NewCustomerService(domain.NewCustomerRepositoryStub())}
+	dbClient := getDbClient()
+
+	customerRepository := domain.NewCustomerRepositoryDb(dbClient)
+	accountRepository := domain.NewAccountRepositoryDb(dbClient)
+	transactionRepository := domain.NewTransactionRepositoryDB(dbClient)
+
+	custumerService := service.NewCustomerService(customerRepository)
+	accountService := service.NewAccountService(accountRepository)
+	transactionService := service.NewDefaultTransactionService(transactionRepository, accountService)
+
+	customerHandler = CustomerHandlers{custumerService}
+	accountHandler = AccountHandler{accountService}
+	transactionHandler = TransactionHandler{transactionService}
+
+	return
 }
 
 func getDbClient() *sqlx.DB {

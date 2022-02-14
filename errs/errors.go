@@ -33,3 +33,10 @@ func NewValidationError(message string) *AppError {
 		Code:    http.StatusUnprocessableEntity,
 	}
 }
+
+func NewNotEnoughMoneyError() *AppError {
+	return &AppError{
+		Message: "Not Enough Money for the Withdrawal",
+		Code:    http.StatusBadRequest,
+	}
+}

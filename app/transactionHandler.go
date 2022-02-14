@@ -6,26 +6,21 @@ import (
 
 	"github.com/caiquenoboa/go-banking/dto"
 	"github.com/caiquenoboa/go-banking/service"
-	"github.com/gorilla/mux"
 )
 
-type AccountHandler struct {
-	service service.AccountService
+type TransactionHandler struct {
+	service service.TransactionService
 }
 
-func (a AccountHandler) newAccount(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	customerId := vars["customer_id"]
-
-	var request dto.AccountRequest
+func (a TransactionHandler) newTransaction(w http.ResponseWriter, r *http.Request) {
+	var request dto.TransactionRequest
 
 	err := json.NewDecoder(r.Body).Decode(&request)
 
 	if err != nil {
 		writeResponse(w, http.StatusBadRequest, err.Error())
 	} else {
-		request.CustomerId = customerId
-		response, appError := a.service.NewAccount(request)
+		response, appError := a.service.NewTransaction(request)
 		if appError != nil {
 			writeResponse(w, appError.Code, appError.AsMessage())
 		} else {
