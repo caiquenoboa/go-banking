@@ -33,11 +33,25 @@ func Start() {
 	customerHandler, accountHandler := initHandlers()
 
 	//define routes
-	router.HandleFunc("/customers", customerHandler.getAllCustomers).Methods(http.MethodGet)
-	router.HandleFunc("/customers/{customer_id:[0-9]+}", customerHandler.getCustomer).Methods(http.MethodGet)
-	router.HandleFunc("/customers/{customer_id:[0-9]+}/account", accountHandler.newAccount).Methods(http.MethodPost)
-	router.HandleFunc("/customers/{customer_id:[0-9]+}/account/{account_id:[0-9]+}", accountHandler.MakeTransaction).
-		Methods(http.MethodPost)
+	router.
+		HandleFunc("/customers", customerHandler.getAllCustomers).
+		Methods(http.MethodGet).
+		Name("GetAllCustomers")
+	router.
+		HandleFunc("/customers/{customer_id:[0-9]+}", customerHandler.getCustomer).
+		Methods(http.MethodGet).
+		Name("GetCustomer")
+	router.
+		HandleFunc("/customers/{customer_id:[0-9]+}/account", accountHandler.newAccount).
+		Methods(http.MethodPost).
+		Name("NewAccount")
+	router.
+		HandleFunc("/customers/{customer_id:[0-9]+}/account/{account_id:[0-9]+}", accountHandler.MakeTransaction).
+		Methods(http.MethodPost).
+		Name("NewTransaction")
+
+	authMiddleware := AuthMiddleware{domain.NewAuthRepository()}
+	router.Use(authMiddleware.authorizationHandler())
 
 	address := os.Getenv("SERVER_ADDRESS")
 	port := os.Getenv("SERVER_PORT")
