@@ -8,10 +8,11 @@ import (
 	"github.com/caiquenoboa/go-banking/errs"
 )
 
+const dbTSLayout = "2006-01-02 15:04:05"
+
 type AccountService interface {
-	NewAccount(dto.AccountRequest) (*dto.AccountResponse, *errs.AppError)
-	CheckBalance(dto.TransactionRequest, domain.Account) (bool, *errs.AppError)
-	UpdateBalanceAmount(dto.TransactionRequest) (float64, *errs.AppError)
+	NewAccount(request dto.AccountRequest) (*dto.AccountResponse, *errs.AppError)
+	MakeTransaction(request dto.TransactionRequest) (*dto.TransactionResponse, *errs.AppError)
 }
 
 type DefaultAccountService struct {
@@ -29,7 +30,7 @@ func (d DefaultAccountService) NewAccount(request dto.AccountRequest) (*dto.Acco
 	account := domain.Account{
 		AccountId:   "",
 		CustomerId:  request.CustomerId,
-		OpeningDate: time.Now().Format("2006-01-02 15:04:05"),
+		OpeningDate: dbTSLayout,
 		AccountType: request.AccountType,
 		Amount:      request.Amount,
 		Status:      "",
@@ -46,45 +47,35 @@ func (d DefaultAccountService) NewAccount(request dto.AccountRequest) (*dto.Acco
 	return &accountResponse, nil
 }
 
-func (d DefaultAccountService) CheckBalance(request dto.TransactionRequest, account domain.Account) (bool, *errs.AppError) {
-	if account.Amount < request.Amount {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-func (d DefaultAccountService) UpdateBalanceAmount(request dto.TransactionRequest) (float64, *errs.AppError) {
-	account, err := d.repo.GetAmountById(request.AccountId)
+func (s DefaultAccountService) MakeTransaction(req dto.TransactionRequest) (*dto.TransactionResponse, *errs.AppError) {
+	// incoming request validation
+	err := req.Validate()
 	if err != nil {
-		return -1.0, err
+		return nil, err
 	}
-
-	var newAmount float64
-
-	if request.TransactionType == "withdrawal" {
-		hasAmount, err := d.CheckBalance(request, *account)
+	// server side validation for checking the available balance in the account
+	if req.IsTransactionTypeWithdrawal() {
+		account, err := s.repo.FindBy(req.AccountId)
 		if err != nil {
-			return -1.0, err
+			return nil, err
 		}
-		if !hasAmount {
-			return -1.0, errs.NewNotEnoughMoneyError()
+		if !account.CanWithdraw(req.Amount) {
+			return nil, errs.NewValidationError("Insufficient balance in the account")
 		}
-		newAmount = account.Amount - request.Amount
 	}
-
-	if request.TransactionType == "deposit" {
-		newAmount = account.Amount + request.Amount
+	// if all is well, build the domain object & save the transaction
+	t := domain.Transaction{
+		AccountId:       req.AccountId,
+		Amount:          req.Amount,
+		TransactionType: req.TransactionType,
+		TransactionDate: time.Now().Format(dbTSLayout),
 	}
-
-	err = d.repo.UpdateBalanceAmountById(account.AccountId, newAmount)
-
-	if err != nil {
-		return -1.0, err
+	transaction, appError := s.repo.SaveTransaction(t)
+	if appError != nil {
+		return nil, appError
 	}
-
-	return newAmount, nil
-
+	response := transaction.ToDto()
+	return &response, nil
 }
 
 func NewAccountService(repo domain.AccountRepository) DefaultAccountService {

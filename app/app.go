@@ -30,13 +30,14 @@ func Start() {
 
 	router := mux.NewRouter()
 
-	customerHandler, accountHandler, transactionHandler := initHandlers()
+	customerHandler, accountHandler := initHandlers()
 
 	//define routes
 	router.HandleFunc("/customers", customerHandler.getAllCustomers).Methods(http.MethodGet)
 	router.HandleFunc("/customers/{customer_id:[0-9]+}", customerHandler.getCustomer).Methods(http.MethodGet)
 	router.HandleFunc("/customers/{customer_id:[0-9]+}/account", accountHandler.newAccount).Methods(http.MethodPost)
-	router.HandleFunc("/customers/{customer_id:[0-9]+}/transaction", transactionHandler.newTransaction).Methods(http.MethodPost)
+	router.HandleFunc("/customers/{customer_id:[0-9]+}/account/{account_id:[0-9]+}", accountHandler.MakeTransaction).
+		Methods(http.MethodPost)
 
 	address := os.Getenv("SERVER_ADDRESS")
 	port := os.Getenv("SERVER_PORT")
@@ -45,22 +46,19 @@ func Start() {
 	log.Fatal(http.ListenAndServe(address+":"+port, router))
 }
 
-func initHandlers() (customerHandler CustomerHandlers, accountHandler AccountHandler, transactionHandler TransactionHandler) {
+func initHandlers() (customerHandler CustomerHandlers, accountHandler AccountHandler) {
 	//wiring
 	// ch := CustomerHandlers{service.NewCustomerService(domain.NewCustomerRepositoryStub())}
 	dbClient := getDbClient()
 
 	customerRepository := domain.NewCustomerRepositoryDb(dbClient)
 	accountRepository := domain.NewAccountRepositoryDb(dbClient)
-	transactionRepository := domain.NewTransactionRepositoryDB(dbClient)
 
 	custumerService := service.NewCustomerService(customerRepository)
 	accountService := service.NewAccountService(accountRepository)
-	transactionService := service.NewDefaultTransactionService(transactionRepository, accountService)
 
 	customerHandler = CustomerHandlers{custumerService}
 	accountHandler = AccountHandler{accountService}
-	transactionHandler = TransactionHandler{transactionService}
 
 	return
 }
