@@ -40,3 +40,10 @@ func NewNotEnoughMoneyError() *AppError {
 		Code:    http.StatusBadRequest,
 	}
 }
+
+func NewAuthorizationError(message string) *AppError {
+	return &AppError{
+		Message: message,
+		Code:    http.StatusForbidden,
+	}
+}
