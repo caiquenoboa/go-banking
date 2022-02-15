@@ -8,8 +8,6 @@ import (
 	"github.com/caiquenoboa/go-banking/errs"
 )
 
-const dbTSLayout = "2006-01-02 15:04:05"
-
 type AccountService interface {
 	NewAccount(request dto.AccountRequest) (*dto.AccountResponse, *errs.AppError)
 	MakeTransaction(request dto.TransactionRequest) (*dto.TransactionResponse, *errs.AppError)
@@ -19,32 +17,22 @@ type DefaultAccountService struct {
 	repo domain.AccountRepository
 }
 
+const dbTSLayout = "2006-01-02 15:04:05"
+
 func (d DefaultAccountService) NewAccount(request dto.AccountRequest) (*dto.AccountResponse, *errs.AppError) {
 
-	err := request.Validate()
-
-	if err != nil {
+	if err := request.Validate(); err != nil {
 		return nil, err
 	}
 
-	account := domain.Account{
-		AccountId:   "",
-		CustomerId:  request.CustomerId,
-		OpeningDate: dbTSLayout,
-		AccountType: request.AccountType,
-		Amount:      request.Amount,
-		Status:      "",
-	}
+	account := domain.NewAccountFromRequest(request)
 
-	newAccount, err := d.repo.Save(account)
-
-	if err != nil {
+	if newAccount, err := d.repo.Save(account); err != nil {
 		return nil, err
+	} else {
+		return newAccount.NewAccountResponse(), nil
 	}
 
-	accountResponse := newAccount.NewAccountResponse()
-
-	return &accountResponse, nil
 }
 
 func (s DefaultAccountService) MakeTransaction(req dto.TransactionRequest) (*dto.TransactionResponse, *errs.AppError) {

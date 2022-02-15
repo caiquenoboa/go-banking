@@ -14,6 +14,7 @@ type Account struct {
 	Status      string  `db:"status"`
 }
 
+//go:generate mockgen -destination=../mocks/domain/mockAccountRepository.go -package=domain github.com/caiquenoboa/go-banking/domain AccountRepository
 type AccountRepository interface {
 	Save(Account) (*Account, *errs.AppError)
 	SaveTransaction(transaction Transaction) (*Transaction, *errs.AppError)
@@ -27,8 +28,21 @@ func (a Account) CanWithdraw(amount float64) bool {
 	return true
 }
 
-func (a Account) NewAccountResponse() dto.AccountResponse {
-	return dto.AccountResponse{
+const dbTSLayout = "2006-01-02 15:04:05"
+
+func NewAccountFromRequest(req dto.AccountRequest) Account {
+	return Account{
+		AccountId:   "",
+		CustomerId:  req.CustomerId,
+		OpeningDate: dbTSLayout,
+		AccountType: req.AccountType,
+		Amount:      req.Amount,
+		Status:      "",
+	}
+}
+
+func (a Account) NewAccountResponse() *dto.AccountResponse {
+	return &dto.AccountResponse{
 		AccountId: a.AccountId,
 	}
 }
